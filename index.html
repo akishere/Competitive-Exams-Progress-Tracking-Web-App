@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UPSC CSE 2027 — Progress Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-card: #1a2235;
+  --bg-card-hover: #1f2a40;
+  --bg-input: #0f1623;
+  --border: #2a3550;
+  --border-active: #4a7cff;
+  --text-primary: #e8ecf4;
+  --text-secondary: #8896b3;
+  --text-muted: #5a6a8a;
+  --accent: #4a7cff;
+  --accent-hover: #6190ff;
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,0.1);
+  --green-border: rgba(34,197,94,0.3);
+  --amber: #f59e0b;
+  --amber-bg: rgba(245,158,11,0.1);
+  --amber-border: rgba(245,158,11,0.3);
+  --red: #ef4444;
+  --purple: #a78bfa;
+  --purple-bg: rgba(167,139,250,0.1);
+  --cyan: #22d3ee;
+  --cyan-bg: rgba(34,211,238,0.1);
+  --static-tag: #3b82f6;
+  --static-bg: rgba(59,130,246,0.12);
+  --dynamic-tag: #f97316;
+  --dynamic-bg: rgba(249,115,22,0.12);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.app-header {
+  background: linear-gradient(135deg, #111827 0%, #1a2744 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 32px;
+  position: sticky; top: 0; z-index: 100;
+}
+.app-header h1 {
+  font-size: 22px; font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #e8ecf4, #4a7cff);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.app-header .subtitle { font-size:13px; color:var(--text-muted); margin-top:2px; }
+
+.top-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px;
+}
+.header-stats {
+  display:flex; gap:20px; align-items:center;
+}
+.stat-pill {
+  display:flex; align-items:center; gap:6px;
+  background: var(--bg-card); border:1px solid var(--border);
+  border-radius:8px; padding:6px 14px; font-size:13px;
+}
+.stat-pill .num { font-weight:700; font-family:'JetBrains Mono',monospace; }
+.stat-pill.green .num { color:var(--green); }
+.stat-pill.amber .num { color:var(--amber); }
+.stat-pill.purple .num { color:var(--purple); }
+
+.header-actions { display:flex; gap:8px; }
+.btn {
+  font-family:inherit; font-size:12px; font-weight:600;
+  padding:7px 14px; border-radius:7px; border:1px solid var(--border);
+  background:var(--bg-card); color:var(--text-secondary);
+  cursor:pointer; transition:all 0.15s;
+}
+.btn:hover { background:var(--bg-card-hover); color:var(--text-primary); border-color:var(--border-active); }
+.btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn.primary:hover { background:var(--accent-hover); }
+.btn.danger { border-color:var(--red); color:var(--red); }
+.btn.danger:hover { background:rgba(239,68,68,0.1); }
+
+.main-container { display:flex; min-height:calc(100vh - 80px); }
+
+.sidebar {
+  width:260px; min-width:260px;
+  background:var(--bg-secondary); border-right:1px solid var(--border);
+  padding:16px 0; overflow-y:auto; position:sticky; top:80px;
+  height:calc(100vh - 80px);
+}
+.sidebar-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 20px; cursor:pointer; transition:all 0.12s;
+  border-left:3px solid transparent; font-size:13px; font-weight:500;
+  color:var(--text-secondary);
+}
+.sidebar-item:hover { background:var(--bg-card); color:var(--text-primary); }
+.sidebar-item.active {
+  background:rgba(74,124,255,0.08); color:var(--accent);
+  border-left-color:var(--accent);
+}
+.sidebar-item .emoji { margin-right:8px; font-size:15px; }
+.sidebar-progress {
+  font-family:'JetBrains Mono',monospace; font-size:11px;
+  padding:2px 8px; border-radius:10px;
+  background:var(--bg-primary); color:var(--text-muted);
+}
+.sidebar-item.active .sidebar-progress { background:rgba(74,124,255,0.15); color:var(--accent); }
+
+.sidebar-section-label {
+  padding:16px 20px 6px; font-size:10px; font-weight:700;
+  letter-spacing:1.2px; text-transform:uppercase; color:var(--text-muted);
+}
+
+.content { flex:1; padding:24px 32px; overflow-y:auto; }
+
+.subject-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:20px; flex-wrap:wrap; gap:12px;
+}
+.subject-title {
+  font-size:20px; font-weight:800; letter-spacing:-0.3px;
+}
+.filter-bar { display:flex; gap:8px; align-items:center; }
+.filter-btn {
+  font-family:inherit; font-size:11px; font-weight:600;
+  padding:5px 12px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; color:var(--text-muted); cursor:pointer;
+  transition:all 0.12s; text-transform:uppercase; letter-spacing:0.5px;
+}
+.filter-btn:hover { border-color:var(--text-secondary); color:var(--text-secondary); }
+.filter-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+.progress-overview {
+  background: var(--bg-card); border:1px solid var(--border); border-radius:10px;
+  padding:16px 20px; margin-bottom:20px;
+}
+.progress-bar-outer {
+  width:100%; height:8px; background:var(--bg-primary);
+  border-radius:4px; overflow:hidden; margin-top:8px;
+}
+.progress-bar-inner {
+  height:100%; border-radius:4px; transition:width 0.4s ease;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+}
+.progress-text {
+  display:flex; justify-content:space-between; font-size:12px;
+  color:var(--text-secondary); margin-top:6px;
+}
+.progress-text .pct { font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--green); }
+
+.topic-group {
+  margin-bottom:16px;
+}
+.topic-group-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 16px; background:var(--bg-card); border:1px solid var(--border);
+  border-radius:8px 8px 0 0; cursor:pointer; transition:all 0.12s;
+}
+.topic-group-header:hover { background:var(--bg-card-hover); }
+.topic-group-header.collapsed { border-radius:8px; }
+.topic-group-title {
+  font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;
+}
+.topic-group-title .arrow { font-size:10px; color:var(--text-muted); transition:transform 0.2s; }
+.topic-group-title .arrow.open { transform:rotate(90deg); }
+.topic-type-tag {
+  font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px;
+  text-transform:uppercase; letter-spacing:0.8px;
+}
+.tag-static { background:var(--static-bg); color:var(--static-tag); }
+.tag-dynamic { background:var(--dynamic-bg); color:var(--dynamic-tag); }
+.topic-group-meta {
+  display:flex; align-items:center; gap:12px; font-size:12px; color:var(--text-muted);
+}
+.mini-progress {
+  width:60px; height:4px; background:var(--bg-primary); border-radius:2px; overflow:hidden;
+}
+.mini-progress-fill { height:100%; background:var(--green); border-radius:2px; transition:width 0.3s; }
+
+.subtopics-table {
+  border:1px solid var(--border); border-top:none; border-radius:0 0 8px 8px;
+  overflow:hidden;
+}
+.subtopic-row {
+  display:grid;
+  grid-template-columns: 1fr 80px 80px 80px 1fr;
+  align-items:center; padding:0; border-bottom:1px solid rgba(42,53,80,0.5);
+  transition:background 0.1s; font-size:13px;
+}
+.subtopic-row:last-child { border-bottom:none; }
+.subtopic-row:hover { background:rgba(74,124,255,0.03); }
+.subtopic-row.completed { opacity:0.6; }
+
+.subtopic-row .cell {
+  padding:8px 12px; display:flex; align-items:center;
+}
+.subtopic-row .cell.name { font-weight:500; padding-left:16px; gap:8px; }
+.subtopic-row .cell.center { justify-content:center; }
+
+.table-header {
+  display:grid;
+  grid-template-columns: 1fr 80px 80px 80px 1fr;
+  background:var(--bg-primary); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted);
+}
+.table-header .cell { padding:8px 12px; }
+.table-header .cell.center { text-align:center; }
+
+.checkbox-wrapper {
+  position:relative; width:20px; height:20px; cursor:pointer;
+}
+.checkbox-wrapper input {
+  position:absolute; opacity:0; width:100%; height:100%; cursor:pointer; margin:0;
+}
+.checkbox-visual {
+  width:18px; height:18px; border:2px solid var(--border);
+  border-radius:4px; display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s; font-size:11px;
+}
+.checkbox-wrapper input:checked + .checkbox-visual {
+  background:var(--green); border-color:var(--green); color:#fff;
+}
+.checkbox-wrapper.rev1 input:checked + .checkbox-visual {
+  background:var(--amber); border-color:var(--amber);
+}
+.checkbox-wrapper.rev2 input:checked + .checkbox-visual {
+  background:var(--purple); border-color:var(--purple);
+}
+
+.comment-input {
+  width:100%; background:transparent; border:none; color:var(--text-secondary);
+  font-family:inherit; font-size:12px; padding:8px 12px; outline:none;
+}
+.comment-input::placeholder { color:var(--text-muted); }
+.comment-input:focus { color:var(--text-primary); }
+
+.milestone-panel {
+  padding:24px 32px;
+}
+.week-card {
+  background:var(--bg-card); border:1px solid var(--border); border-radius:10px;
+  margin-bottom:12px; overflow:hidden;
+}
+.week-card-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; cursor:pointer;
+}
+.week-card-header:hover { background:var(--bg-card-hover); }
+.week-label { font-weight:700; font-size:14px; }
+.week-dates { font-size:12px; color:var(--text-muted); }
+.week-status {
+  font-size:11px; font-weight:700; padding:3px 10px; border-radius:5px;
+}
+.status-pending { background:var(--bg-primary); color:var(--text-muted); }
+.status-active { background:rgba(74,124,255,0.15); color:var(--accent); }
+.status-done { background:var(--green-bg); color:var(--green); }
+.status-break { background:var(--amber-bg); color:var(--amber); }
+
+.week-tasks { padding:4px 16px 12px; }
+.week-task {
+  display:flex; align-items:flex-start; gap:8px; padding:6px 0;
+  font-size:13px; color:var(--text-secondary);
+}
+.week-task .checkbox-wrapper { flex-shrink:0; margin-top:1px; }
+
+.export-modal {
+  position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex;
+  align-items:center; justify-content:center; z-index:200;
+}
+.export-modal-content {
+  background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
+  padding:24px; max-width:500px; width:90%;
+}
+.export-modal h3 { font-size:16px; margin-bottom:12px; }
+.export-textarea {
+  width:100%; height:200px; background:var(--bg-primary); border:1px solid var(--border);
+  border-radius:8px; padding:12px; color:var(--text-primary); font-family:'JetBrains Mono',monospace;
+  font-size:11px; resize:none; outline:none;
+}
+
+.search-input {
+  background:var(--bg-input); border:1px solid var(--border); border-radius:7px;
+  padding:7px 12px; color:var(--text-primary); font-family:inherit; font-size:13px;
+  outline:none; width:220px; transition:border-color 0.15s;
+}
+.search-input:focus { border-color:var(--border-active); }
+.search-input::placeholder { color:var(--text-muted); }
+
+@media (max-width:900px) {
+  .sidebar { display:none; }
+  .content { padding:16px; }
+  .subtopic-row { grid-template-columns: 1fr 60px 60px 60px; }
+  .subtopic-row .cell:last-child { display:none; }
+  .table-header { grid-template-columns: 1fr 60px 60px 60px; }
+  .table-header .cell:last-child { display:none; }
+  .header-stats { display:none; }
+}
+
+/* ==================== LOGIN ==================== */
+.login-screen {
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background: var(--bg-primary); padding:20px;
+}
+.login-card {
+  background:var(--bg-card); border:1px solid var(--border); border-radius:14px;
+  padding:36px; width:100%; max-width:360px; text-align:center;
+  display:flex; flex-direction:column; gap:12px;
+}
+.login-logo { font-size:40px; }
+.login-card h1 { font-size:20px; font-weight:800; letter-spacing:-0.3px; }
+.login-subtitle { font-size:13px; color:var(--text-muted); margin-bottom:8px; }
+.login-input {
+  background:var(--bg-input); border:1px solid var(--border); border-radius:8px;
+  padding:11px 14px; color:var(--text-primary); font-family:inherit; font-size:14px; outline:none;
+  transition:border-color 0.15s;
+}
+.login-input:focus { border-color:var(--border-active); }
+.login-input::placeholder { color:var(--text-muted); }
+.login-error {
+  color:var(--red); font-size:12px; background:rgba(239,68,68,0.1);
+  border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px;
+}
+.login-btn { padding:11px; font-size:13px; margin-top:4px; }
+.setup-note {
+  font-size:11px; color:var(--text-muted); text-align:left; line-height:1.6;
+  background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:12px;
+}
+.setup-note code {
+  font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:11px;
+}
+
+/* ==================== MODULE SELECTOR ==================== */
+.module-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr));
+  gap:18px; padding:32px;
+}
+.module-card {
+  background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
+  padding:22px; cursor:pointer; transition:all 0.15s;
+  display:flex; flex-direction:column; gap:10px;
+}
+.module-card:hover { border-color:var(--border-active); background:var(--bg-card-hover); transform:translateY(-2px); }
+.module-card-emoji { font-size:32px; }
+.module-card-name { font-size:16px; font-weight:700; }
+.module-card-tagline { font-size:12px; color:var(--text-muted); min-height:32px; line-height:1.5; }
+.module-card-pct { font-size:12px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ==================== FIREBASE SETUP ====================
+// Fill these in from Firebase Console → Project Settings → Your apps → Web app config.
+// See README.md for full setup steps (Firestore + Authentication).
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// The "admin" username maps to this fixed email for Firebase Auth.
+// Create a user with this email + password "1234" in Firebase Console → Authentication → Users.
+const ADMIN_EMAIL = "admin@examtracker.app";
+
+const FIREBASE_READY = !!(firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("YOUR_"));
+
+let auth = null, db = null;
+if (FIREBASE_READY) {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  db.enablePersistence().catch(() => {});
+}
+
+const SUBJECTS_DATA = [
+  {
+    id: "polity", name: "Indian Polity", emoji: "🏛️", weight: "16.9%", pyqs: 191,
+    topics: [
+      { id:"p1", name:"Constitutional Framework", type:"static", subtopics:[
+        "Historical underpinnings — making of the Constitution",
+        "Preamble — keywords, philosophy, amendments",
+        "Union & its Territory — Articles 1-4",
+        "Citizenship — Articles 5-11, CAA provisions",
+        "Fundamental Rights — Articles 12-35 (all)",
+        "Directive Principles of State Policy — Articles 36-51",
+        "Fundamental Duties — Article 51A",
+        "Amendment process — Article 368, Basic Structure doctrine",
+        "Schedules of the Constitution (all 12)",
+      ]},
+      { id:"p2", name:"Union Executive & Legislature", type:"static", subtopics:[
+        "President — election, powers, ordinance-making",
+        "Vice President & PM — appointment, functions",
+        "Council of Ministers — collective responsibility",
+        "Parliament — Lok Sabha & Rajya Sabha structure",
+        "Legislative procedure — ordinary & money bills",
+        "Joint Session of Parliament — Article 108",
+        "Parliamentary Committees — types & functions",
+        "Parliamentary privileges & immunities",
+        "Devices of Parliamentary Proceedings — question hour, zero hour",
+        "Anti-Defection Law — 10th Schedule",
+      ]},
+      { id:"p3", name:"State Government & Local Bodies", type:"static", subtopics:[
+        "Governor — appointment, powers, discretionary role",
+        "State Legislature — Vidhan Sabha, Vidhan Parishad",
+        "Panchayati Raj — 73rd Amendment, structure",
+        "Municipalities — 74th Amendment",
+        "Union Territories — administration",
+        "Special provisions — J&K (Article 370), NE states",
+      ]},
+      { id:"p4", name:"Judiciary & Constitutional Bodies", type:"static", subtopics:[
+        "Supreme Court — jurisdiction, powers, judicial review",
+        "High Courts — jurisdiction, writ powers",
+        "Subordinate Courts",
+        "Election Commission — appointment, functions",
+        "CAG — Comptroller & Auditor General",
+        "UPSC & State PSCs",
+        "Finance Commission",
+        "Attorney General & Advocate General",
+        "National Commissions — SC/ST/Women/Minorities/Backward",
+      ]},
+      { id:"p5", name:"Federal Structure & Special Provisions", type:"dynamic", subtopics:[
+        "Centre-State relations — legislative, administrative, financial",
+        "Inter-State relations — disputes, water sharing",
+        "Emergency provisions — National, State, Financial",
+        "Representation of People's Act",
+        "Tribunals — NCLT, NGT, AFT, CAT",
+        "Statutory & regulatory bodies — SEBI, RBI, CCI, TRAI",
+        "Right to Information — RTI Act provisions",
+        "Recent constitutional amendments & landmark judgments",
+        "Comparison with other countries' constitutions",
+      ]},
+    ]
+  },
+  {
+    id: "economy", name: "Indian Economy", emoji: "💰", weight: "17.6%", pyqs: 199,
+    topics: [
+      { id:"e1", name:"Macro Economics & National Income", type:"static", subtopics:[
+        "GDP, GNP, NNP, NDP — concepts & calculation",
+        "Economic growth vs development",
+        "Types of economies — mixed, market, command",
+        "Sectors of economy — primary, secondary, tertiary",
+        "Demographic dividend & unemployment types",
+        "Poverty — measurement, BPL, Multidimensional Poverty Index",
+        "Human Development Index — components",
+      ]},
+      { id:"e2", name:"Money, Banking & Monetary Policy", type:"dynamic", subtopics:[
+        "RBI — structure, functions, monetary policy tools",
+        "Repo rate, Reverse repo, SLR, CRR, MSF, LAF",
+        "Money supply — M0, M1, M2, M3",
+        "Inflation — types, WPI, CPI, measurement",
+        "Banking — commercial, cooperative, payment, small finance",
+        "NPA crisis — causes, IBC, SARFAESI",
+        "NBFC regulations",
+        "Digital payments — UPI, CBDC (e-Rupee), fintech",
+        "Financial inclusion — Jan Dhan, Mudra, PM-SYM",
+        "Basel norms — I, II, III",
+      ]},
+      { id:"e3", name:"Public Finance & Fiscal Policy", type:"dynamic", subtopics:[
+        "Union Budget — process, components, terminology",
+        "Fiscal deficit, Revenue deficit, Primary deficit",
+        "Taxation — direct & indirect, GST structure",
+        "GST Council — composition, functions, rates",
+        "FRBM Act",
+        "Public debt — internal & external",
+        "Government securities — T-bills, bonds",
+        "Debt instruments — commercial paper, certificate of deposit",
+        "Finance Commission — role & recent recommendations",
+        "Subsidies — food, fertilizer, fuel",
+      ]},
+      { id:"e4", name:"External Sector & Trade", type:"dynamic", subtopics:[
+        "Balance of Payments — current & capital account",
+        "Foreign exchange reserves",
+        "FDI vs FPI — policies, regulations, FEMA",
+        "WTO — agreements, dispute settlement, Doha round",
+        "Trade agreements — RCEP, bilateral FTAs",
+        "Exchange rate — fixed vs floating, managed float",
+        "External Commercial Borrowings (ECB)",
+        "Special Economic Zones (SEZ)",
+        "Export promotion — PLI, Atmanirbhar Bharat",
+      ]},
+      { id:"e5", name:"Agriculture & Food Security", type:"dynamic", subtopics:[
+        "Cropping patterns & major crops",
+        "MSP — mechanism, Swaminathan Commission",
+        "Agricultural commodity trading — APMC, e-NAM",
+        "Irrigation — types, systems, micro-irrigation",
+        "Land reforms — history & current status",
+        "Green Revolution, White Revolution, Blue Revolution",
+        "Food security — PDS, NFSA, buffer stocks",
+        "Organic farming, precision farming, drone technology",
+        "Agricultural subsidies — direct & indirect",
+        "Food processing industry — scope, FPOs",
+        "Sustainable agriculture — zero budget, natural farming",
+      ]},
+      { id:"e6", name:"Industry, Infrastructure & Planning", type:"dynamic", subtopics:[
+        "Industrial policy — 1991 liberalization, Make in India",
+        "Infrastructure — roads, railways, ports, airports",
+        "Investment models — PPP, BOT, BOOT",
+        "Energy — coal, oil, gas, renewable targets",
+        "Economic planning history — five-year plans to NITI Aayog",
+        "Inclusive growth — Gini coefficient, inequality",
+        "Government schemes — PM GatiShakti, Sagarmala, Bharatmala",
+        "Disinvestment & privatization",
+      ]},
+    ]
+  },
+  {
+    id: "environment", name: "Environment & Ecology", emoji: "🌿", weight: "18.8%", pyqs: 213,
+    topics: [
+      { id:"en1", name:"Ecology Fundamentals", type:"static", subtopics:[
+        "Ecosystem — structure, function, types",
+        "Food chain, food web, trophic levels",
+        "Ecological pyramids — number, biomass, energy",
+        "Biogeochemical cycles — carbon, nitrogen, phosphorus, water",
+        "Ecological succession — primary & secondary",
+        "Biomes — terrestrial & aquatic",
+        "Species interactions — symbiosis, parasitism, competition",
+      ]},
+      { id:"en2", name:"Biodiversity & Conservation", type:"dynamic", subtopics:[
+        "Biodiversity — genetic, species, ecosystem levels",
+        "Biodiversity hotspots — India & global",
+        "IUCN Red List — categories & species in news",
+        "Endemic, endangered & invasive species (EVERY YEAR topic)",
+        "In-situ conservation — National Parks, Wildlife Sanctuaries, Biosphere Reserves",
+        "Ex-situ conservation — zoos, gene banks, seed vaults",
+        "Tiger Reserves — Project Tiger, all reserves list",
+        "Elephant Reserves & Corridors",
+        "Ramsar sites — updated list for India",
+        "UNESCO World Heritage Sites — natural sites",
+        "Marine species & marine protected areas",
+        "Western Ghats & Eastern Ghats biodiversity",
+        "Coral reefs — threats, conservation",
+        "Mangroves — distribution, importance",
+      ]},
+      { id:"en3", name:"Environmental Pollution", type:"dynamic", subtopics:[
+        "Air pollution — types, AQI, NCAP, GRAP",
+        "Water pollution — BOD, COD, eutrophication",
+        "Soil pollution — causes, remediation",
+        "Industrial pollution — effluent standards",
+        "Noise pollution — standards, regulations",
+        "E-waste — management rules, EPR",
+        "Plastic waste — rules, single-use plastic ban",
+        "Waste management — solid, hazardous, biomedical",
+        "Biomagnification & bioaccumulation",
+      ]},
+      { id:"en4", name:"Climate Change & International Conventions", type:"dynamic", subtopics:[
+        "Global warming — greenhouse effect, GHGs",
+        "Climate change impacts — sea level, extreme events",
+        "UNFCCC — COP outcomes, Paris Agreement",
+        "Kyoto Protocol — CDM, carbon credits",
+        "Carbon markets — voluntary & compliance",
+        "India's NDC — targets, progress",
+        "IPCC — reports, findings",
+        "Ozone depletion — Montreal Protocol",
+        "CBD — Convention on Biological Diversity, Kunming-Montreal framework",
+        "CITES — endangered species trade",
+        "Ramsar Convention — wetlands",
+        "Sustainable Development Goals — all 17",
+        "Global Climate Finance — GCF, GEF, Adaptation Fund",
+      ]},
+      { id:"en5", name:"Environmental Laws & Governance", type:"dynamic", subtopics:[
+        "Environment Protection Act 1986",
+        "Wildlife Protection Act 1972 — amendments",
+        "Forest Conservation Act — recent amendments",
+        "EIA — process, notification, dilutions debate",
+        "National Green Tribunal — powers, jurisdiction",
+        "Scheduled Tribes & Forest Rights Act (FRA)",
+        "Compensatory Afforestation (CAMPA)",
+        "Eco-sensitive zones — guidelines",
+        "Coastal Regulation Zone (CRZ)",
+        "National Biodiversity Authority",
+        "Eco-engineering concepts (asked every year)",
+      ]},
+      { id:"en6", name:"Agriculture & Environment", type:"dynamic", subtopics:[
+        "Soil conservation — methods, watershed management",
+        "Water conservation — rainwater harvesting, check dams",
+        "Desertification — UNCCD, India's efforts",
+        "Carbon sequestration — methods",
+        "Renewable energy — solar, wind, hydrogen, green ammonia",
+        "Biofuels — ethanol blending, biodiesel",
+        "Agroforestry & social forestry",
+        "Environmental organizations — WWF, TRAFFIC, IUCN, UNEP",
+      ]},
+    ]
+  },
+  {
+    id: "geography", name: "Geography", emoji: "🌍", weight: "13.4%", pyqs: 152,
+    topics: [
+      { id:"g1", name:"Physical Geography — Universe & Earth", type:"static", subtopics:[
+        "Solar system — planets, asteroids, comets",
+        "Earth's interior — crust, mantle, core",
+        "Plate tectonics — continental drift, seafloor spreading",
+        "Earthquakes — types, zones, seismic waves",
+        "Volcanoes — types, distribution, Ring of Fire",
+        "Geomorphic processes — weathering, erosion, deposition",
+        "Landforms — mountains, plateaus, plains",
+        "Rocks — igneous, sedimentary, metamorphic, rock cycle",
+      ]},
+      { id:"g2", name:"Climatology & Oceanography", type:"static", subtopics:[
+        "Atmosphere — composition, layers, heat budget",
+        "Wind systems — planetary, periodic, local",
+        "Indian Monsoon — mechanism, variability, breaks",
+        "Pressure belts & wind patterns",
+        "Cyclones — tropical & temperate, formation",
+        "World climate types — Koppen classification",
+        "Ocean currents — warm & cold, effects",
+        "El Nino, La Nina — ENSO, IOD",
+        "Tides — types, spring & neap",
+        "Salinity & temperature distribution",
+      ]},
+      { id:"g3", name:"Indian Physical Geography", type:"static", subtopics:[
+        "Physiographic divisions of India — Himalayas, Plains, Plateau, Coastal, Islands",
+        "Himalayan river systems — Indus, Ganga, Brahmaputra",
+        "Peninsular river systems — Godavari, Krishna, Narmada, Tapi",
+        "Soil types of India — alluvial, black, red, laterite",
+        "Natural vegetation — tropical, temperate, alpine",
+        "Climate of India — seasons, rainfall distribution",
+        "Earthquake zones of India",
+        "Passes — important mountain passes",
+        "Islands — Andaman & Nicobar, Lakshadweep",
+      ]},
+      { id:"g4", name:"Economic & Human Geography", type:"dynamic", subtopics:[
+        "Major crops — rice, wheat, cotton, sugarcane, tea, coffee",
+        "Mineral resources — iron, coal, mica, bauxite distribution",
+        "Energy resources — coal, oil, gas fields, nuclear plants",
+        "Industrial location factors & major industrial regions",
+        "Transport — roads, railways, waterways, airways",
+        "Population distribution — density, growth, migration",
+        "Urbanization — trends, smart cities, problems",
+        "Tribes of India — distribution, issues",
+      ]},
+      { id:"g5", name:"World Geography & Map Work", type:"static", subtopics:[
+        "World map — straits, channels, isthmuses",
+        "Important water bodies — seas, lakes, gulfs",
+        "Central Asia, West Asia, Africa — physical features (UPSC favourite region)",
+        "Resource distribution — oil, minerals globally",
+        "International boundaries & disputes",
+        "India's border countries — geographic features",
+        "Map-based questions practice — locating places, rivers, peaks",
+      ]},
+    ]
+  },
+  {
+    id: "science", name: "Science & Technology", emoji: "🔬", weight: "13.4%", pyqs: 151,
+    topics: [
+      { id:"s1", name:"Basic & Everyday Science", type:"static", subtopics:[
+        "Physics — light, sound, heat, electricity basics",
+        "Chemistry — acids, bases, pH, reactions, elements",
+        "Biology — cell, DNA, genetics, human body systems",
+        "Diseases — types, transmission, prevention (viral, bacterial, vector-borne)",
+        "Vitamins & minerals — deficiency diseases",
+        "Nutrition — macros, micros, balanced diet",
+        "Microorganisms — bacteria, virus, fungi, protozoa",
+      ]},
+      { id:"s2", name:"Space Technology", type:"dynamic", subtopics:[
+        "ISRO missions — Gaganyaan, Chandrayaan, Aditya-L1, Mangalyaan",
+        "ISRO launch vehicles — PSLV, GSLV, SSLV, LVM3",
+        "Satellites — types (communication, navigation, remote sensing)",
+        "NAVIC, IRNSS — Indian navigation system",
+        "International space agencies — NASA, ESA, CNSA",
+        "Space debris — mitigation, Kessler syndrome",
+        "Gravitational waves — LIGO, applications",
+      ]},
+      { id:"s3", name:"Nuclear & Energy Technology", type:"dynamic", subtopics:[
+        "Nuclear fission & fusion — principles",
+        "India's nuclear program — stages, thorium cycle",
+        "Nuclear reactors — PHWR, FBR, SMR",
+        "Nuclear agreements — 123 Agreement, NSG",
+        "Renewable energy — solar PV, wind, hydrogen fuel cells",
+        "Green hydrogen, green ammonia",
+        "Battery technology — lithium-ion, solid state",
+      ]},
+      { id:"s4", name:"Biotechnology & Health", type:"dynamic", subtopics:[
+        "Biotechnology — DNA fingerprinting, PCR, gel electrophoresis",
+        "CRISPR gene editing — mechanism, applications",
+        "GM crops — Bt cotton, Bt brinjal, regulation (GEAC)",
+        "Stem cells — types, applications",
+        "Vaccines — types (mRNA, vector, inactivated), development",
+        "Gene therapy & personalized medicine",
+        "Antibiotic resistance — AMR, global threat",
+        "Bioethics — cloning, designer babies",
+      ]},
+      { id:"s5", name:"IT, Communication & Emerging Tech", type:"dynamic", subtopics:[
+        "Artificial Intelligence — types, applications, risks",
+        "Machine Learning, Deep Learning, LLMs (large language models)",
+        "Quantum computing — qubits, supremacy",
+        "Blockchain — mechanism, crypto regulation, CBDC",
+        "5G/6G technology — spectrum, applications",
+        "Internet of Things (IoT) — applications",
+        "Cyber security — threats, CERT-In, data protection",
+        "Deepfakes — technology, regulation",
+        "Nanotechnology — applications in medicine, materials",
+        "3D printing — bioprinting, industrial applications",
+        "Web 3.0, Metaverse — concepts",
+      ]},
+      { id:"s6", name:"Defence & Missile Technology", type:"dynamic", subtopics:[
+        "Missiles — Agni, Prithvi, BrahMos, Akash classification",
+        "DRDO — labs, recent developments",
+        "Indigenous defence — Tejas, INS Vikrant, Arjun tank",
+        "Hypersonic technology",
+        "Directed energy weapons",
+      ]},
+    ]
+  },
+  {
+    id: "modern_history", name: "Modern History", emoji: "📜", weight: "8.1%", pyqs: 92,
+    topics: [
+      { id:"mh1", name:"European Advent & British Expansion", type:"static", subtopics:[
+        "Portuguese, Dutch, French, British — arrival & trade",
+        "East India Company — establishment, factories, battles",
+        "Subsidiary Alliance & Doctrine of Lapse",
+        "British conquest — Mysore, Marathas, Sikhs, Awadh",
+        "Colonialism — economic drain, commercialization of agriculture",
+      ]},
+      { id:"mh2", name:"British Administration & Reforms", type:"static", subtopics:[
+        "Land Revenue Systems — Permanent, Ryotwari, Mahalwari",
+        "Administrative reforms pre-1857 — Regulating Act, Pitt's India Act, Charter Acts",
+        "Administrative reforms post-1857 — Indian Councils Act 1861, 1892, 1909",
+        "Montagu-Chelmsford Reforms / GoI Act 1919",
+        "Government of India Act 1935",
+        "Education reforms — Wood's Despatch, Macaulay, Hunter Commission",
+        "Economic exploitation — de-industrialization, colonial trade",
+        "Labour legislations & labour movements",
+      ]},
+      { id:"mh3", name:"Social & Religious Reform Movements", type:"static", subtopics:[
+        "Brahmo Samaj — Raja Ram Mohan Roy",
+        "Arya Samaj — Dayananda Saraswati",
+        "Ramakrishna Mission — Swami Vivekananda",
+        "Aligarh Movement — Sir Syed Ahmad Khan",
+        "Theosophical Society — Annie Besant",
+        "Other reformers — Jyotiba Phule, Ishwar Chandra Vidyasagar, Pandita Ramabai",
+        "Caste reform movements",
+      ]},
+      { id:"mh4", name:"National Movement — Early Phase", type:"static", subtopics:[
+        "Indian National Congress — formation, Moderate phase",
+        "Extremist phase — Tilak, Lajpat Rai, Bipin Chandra Pal",
+        "Surat Split (1907)",
+        "Swadeshi Movement (1905-1908) — methods, impact",
+        "Home Rule League Movement — Tilak & Besant",
+        "Revolutionary movements — India & abroad",
+        "Important INC Sessions & resolutions",
+      ]},
+      { id:"mh5", name:"Gandhian Era & Freedom Struggle", type:"static", subtopics:[
+        "Champaran, Kheda, Ahmedabad — early Satyagraha",
+        "Non-Cooperation Movement (1920-22) — Chauri Chaura",
+        "Civil Disobedience Movement — Salt March (1930)",
+        "Round Table Conferences & Poona Pact",
+        "Quit India Movement (1942) — Do or Die",
+        "INA & Netaji Subhash Chandra Bose — Red Fort trials",
+        "RIN Mutiny (1946)",
+        "Cripps Mission, Wavell Plan, Simla Conference",
+        "Cabinet Mission (1946)",
+        "Indian Independence Act 1947",
+        "Tribal movements — Santhal, Munda, Birsa, Kol",
+      ]},
+      { id:"mh6", name:"Post-Independence & World History", type:"dynamic", subtopics:[
+        "Integration of princely states — Sardar Patel",
+        "Linguistic reorganization of states",
+        "Industrial Revolution — impact",
+        "World Wars — causes, effects, aftermath",
+        "Decolonization — Asia, Africa",
+        "Cold War — blocs, NAM",
+        "Important personalities & literary works of freedom struggle",
+      ]},
+    ]
+  },
+  {
+    id: "ancient_history", name: "Ancient & Medieval History", emoji: "🏺", weight: "5.9%", pyqs: 67,
+    topics: [
+      { id:"ah1", name:"Prehistoric & Indus Valley Civilization", type:"static", subtopics:[
+        "Stone Age — Paleolithic, Mesolithic, Neolithic, Chalcolithic sites",
+        "Indus Valley Civilization — sites, features, decline",
+        "Religious aspects of Harappan civilization",
+        "Town planning, trade, art of IVC",
+      ]},
+      { id:"ah2", name:"Vedic Age & Mahajanapadas", type:"static", subtopics:[
+        "Early Vedic vs Later Vedic society",
+        "Rig Vedic literature & concepts",
+        "16 Mahajanapadas",
+        "Rise of Buddhism & Jainism — philosophy, spread",
+        "Jain philosophy — Anekantavada, Syadvada",
+        "Buddhist philosophy — Four Noble Truths, Eightfold Path",
+        "Buddhist councils & literature",
+      ]},
+      { id:"ah3", name:"Mauryan & Post-Mauryan Period", type:"static", subtopics:[
+        "Chandragupta Maurya — Arthashastra significance",
+        "Ashoka — Dhamma, inscriptions, edicts, locations",
+        "Mauryan administration — economy, art",
+        "Sunga, Kanva, Satavahana dynasties",
+        "Indo-Greek, Shaka, Kushana — contributions",
+        "Sangam Age — literature, trade, society",
+      ]},
+      { id:"ah4", name:"Gupta & Post-Gupta Period", type:"static", subtopics:[
+        "Gupta administration — decentralization",
+        "Gupta trade & commerce",
+        "Art & culture during Gupta age",
+        "Science & technology — Aryabhata, Varahamihira",
+        "Foreign travelers — Fa Hien, Hiuen Tsang, I-Tsing",
+        "Regional dynasties — Chalukyas, Pallavas, Rashtrakutas",
+      ]},
+      { id:"ah5", name:"Medieval India — Sultanate Period", type:"static", subtopics:[
+        "Arab & Turkish invasions",
+        "Delhi Sultanate — Slave, Khilji, Tughlaq, Sayyid, Lodi",
+        "Sultanate administration & revenue system",
+        "Mongol invasions & their impact",
+        "Bhakti Movement — saints, philosophy, impact",
+        "Sufi Movement — orders, practices, influence",
+      ]},
+      { id:"ah6", name:"Medieval India — Mughal Period & Vijayanagar", type:"static", subtopics:[
+        "Mughal administration — mansabdari, revenue (zabt system)",
+        "Mughal art & culture — architecture, painting",
+        "Vijayanagar Empire — economy, polity, foreign trade",
+        "Foreign travelers — Abdur Razzaq, Nicolo Conti, Barbosa",
+        "Maratha rise — Shivaji, administration",
+        "Medieval terminologies & keywords",
+        "Decline of Mughal Empire",
+      ]},
+    ]
+  },
+  {
+    id: "art_culture", name: "Art & Culture", emoji: "🎨", weight: "5.8%", pyqs: 66,
+    topics: [
+      { id:"ac1", name:"Architecture", type:"static", subtopics:[
+        "Temple architecture — Nagara, Dravida, Vesara styles",
+        "Rock-cut architecture — Ajanta, Ellora, Elephanta (repeatedly asked)",
+        "Buddhist architecture — stupas, viharas, chaityas",
+        "Mughal architecture — tombs, forts, mosques",
+        "Indo-Islamic architecture — features, examples",
+        "Colonial architecture — Indo-Saracenic",
+        "UNESCO World Heritage Sites — cultural sites in India",
+      ]},
+      { id:"ac2", name:"Painting, Sculpture & Crafts", type:"static", subtopics:[
+        "Indian painting schools — Rajasthani, Mughal, Pahari, Deccan",
+        "Mural paintings — Ajanta, Lepakshi, Kerala",
+        "Sculptures — Gandhara, Mathura, Amaravati",
+        "Kalamkari, Madhubani, Warli — folk arts",
+        "GI-tagged art forms & handicrafts",
+      ]},
+      { id:"ac3", name:"Performing Arts", type:"static", subtopics:[
+        "Classical dances — 8 forms, states, features",
+        "Folk dances — state-wise important ones",
+        "Classical music — Hindustani vs Carnatic",
+        "Indian theatre — traditional forms",
+        "Indian martial arts — Kalaripayattu, Silambam, Gatka",
+      ]},
+      { id:"ac4", name:"Religion & Philosophy", type:"static", subtopics:[
+        "Buddhism — Mahayana, Hinayana, Vajrayana, Bodhisattva (most asked in this subject)",
+        "Jainism — Digambara, Svetambara, literature",
+        "Indian schools of philosophy — Sankhya, Yoga, Nyaya, Vaisheshika, Vedanta, Mimamsa",
+        "Bhakti Movement — Alvars, Nayanars, Kabir, Nanak",
+        "Sufi orders — Chishti, Suhrawardi, Qadiri, Naqshbandi",
+      ]},
+      { id:"ac5", name:"Literature & Language", type:"static", subtopics:[
+        "Ancient Indian literature — Vedas, Upanishads, Smritis",
+        "Sangam literature",
+        "Buddhist & Jain literature",
+        "Medieval literature — Persian, regional languages",
+        "Tribal culture — festivals, customs, art",
+      ]},
+    ]
+  },
+  {
+    id: "sociology", name: "Sociology (Optional)", emoji: "📚", weight: "Optional", pyqs: 0,
+    topics: [
+      { id:"so1", name:"Paper I — Fundamentals of Sociology", type:"static", subtopics:[
+        "Sociology as discipline — scope, modernity, comparison",
+        "Sociology as Science — positivism, scientific method",
+        "Research Methods — qualitative, quantitative, sampling, hypothesis",
+        "Sociological Thinkers — Marx (historical materialism, alienation)",
+        "Sociological Thinkers — Durkheim (division of labour, suicide, social fact)",
+        "Sociological Thinkers — Weber (social action, ideal types, bureaucracy, Protestant ethic)",
+        "Sociological Thinkers — Parsons (social system, pattern variables)",
+        "Sociological Thinkers — Merton (manifest/latent functions, reference groups)",
+        "Sociological Thinkers — Mead (self & identity)",
+        "Stratification — concepts, theories (functionalist, Marxist, Weberian)",
+        "Social mobility — types, sources, open vs closed systems",
+        "Work & Economic Life — organization in different societies",
+        "Politics & Society — power, state, democracy, social movements",
+        "Religion & Society — theories, secularization, revivalism",
+        "Kinship — family, marriage, household",
+      ]},
+      { id:"so2", name:"Paper II — Indian Society", type:"dynamic", subtopics:[
+        "Indian Society — colonial impact, perspectives (Indological, structural-functional, Marxian)",
+        "Caste system — features, theories (Ghurye, Srinivas, Dumont), changes",
+        "Tribal communities — integration vs autonomy, problems",
+        "Social classes — agrarian, industrial, middle class",
+        "Kinship in India — lineage, descent, family, marriage, patriarchy",
+        "Religion & Society — religious communities, minority problems",
+        "Visions of social change — development planning, Constitution, education",
+        "Rural transformation — green revolution, agrarian change, rural labour",
+        "Industrialization & Urbanization — working class, informal sector, slums",
+        "Politics & Society — democracy, political parties, regionalism",
+        "Social movements — peasant, tribal, women's, Dalit, environmental, backward classes",
+        "Population dynamics — theory, policy, migration, aging",
+        "Challenges — poverty, violence against women, child labour, caste, ethnicity",
+      ]},
+    ]
+  },
+  {
+    id: "ethics", name: "Ethics (GS4)", emoji: "⚖️", weight: "GS4-250 marks", pyqs: 0,
+    topics: [
+      { id:"et1", name:"Ethics & Human Interface", type:"static", subtopics:[
+        "Ethics — essence, determinants, consequences",
+        "Dimensions of ethics — personal, professional, social",
+        "Human values — lessons from great leaders (Gandhi, Ambedkar, Mandela)",
+        "Role of family, society, education in inculcating values",
+        "Attitude — content, structure, function",
+        "Moral & political attitudes",
+        "Social influence & persuasion",
+      ]},
+      { id:"et2", name:"Civil Service Values & Emotional Intelligence", type:"static", subtopics:[
+        "Aptitude & foundational values — integrity, impartiality, non-partisanship",
+        "Dedication to public service, empathy, tolerance, compassion",
+        "Emotional Intelligence — concepts, utility in governance",
+        "Contributions of moral thinkers — Indian (Kautilya, Gandhi, Tagore, Aurobindo)",
+        "Contributions of moral thinkers — Western (Aristotle, Kant, Bentham, Rawls)",
+      ]},
+      { id:"et3", name:"Probity & Governance", type:"dynamic", subtopics:[
+        "Public service values — ethical concerns & dilemmas",
+        "Laws, rules vs conscience as ethical guidance",
+        "Accountability & ethical governance",
+        "RTI, Citizen's Charters, Codes of Ethics",
+        "Work culture & quality of service delivery",
+        "Corruption — causes, remedies, Lokpal/Lokayukta",
+        "Case studies practice — 10-12 themes",
+        "Ethical issues in international relations",
+        "Corporate governance",
+      ]},
+    ]
+  },
+  {
+    id: "current_affairs", name: "Current Affairs", emoji: "📰", weight: "Cross-cutting", pyqs: 0,
+    topics: [
+      { id:"ca1", name:"Monthly Current Affairs Tracking", type:"dynamic", subtopics:[
+        "June 2026 — The Hindu + Vision IAS",
+        "July 2026 — The Hindu + Vision IAS",
+        "August 2026 — The Hindu + Vision IAS",
+        "September 2026 — The Hindu + Vision IAS",
+        "October 2026 — The Hindu + Vision IAS",
+        "November 2026 — The Hindu + Vision IAS",
+        "December 2026 — The Hindu + Vision IAS",
+        "January 2027 — The Hindu + Vision IAS",
+        "February 2027 — The Hindu + Vision IAS",
+        "March 2027 — The Hindu + Vision IAS",
+        "April 2027 — The Hindu + Vision IAS + PT365",
+        "May 2027 (pre-exam) — Final revision",
+      ]},
+      { id:"ca2", name:"Government Reports & Documents", type:"dynamic", subtopics:[
+        "Economic Survey 2026-27",
+        "Union Budget 2027-28",
+        "India State of Forest Report",
+        "Census data (if released)",
+        "NITI Aayog reports",
+        "World Bank / IMF reports on India",
+        "UNDP Human Development Report",
+      ]},
+    ]
+  },
+];
+
+// ==================== STORAGE HELPERS ====================
+
+function getSubtopicKey(subjectId, topicId, subtopicIdx) {
+  return `${subjectId}__${topicId}__${subtopicIdx}`;
+}
+
+// Realtime Firestore-backed progress for one module, with debounced writes
+// and a one-time migration from the old localStorage keys for the UPSC module.
+function useModuleData(uid, moduleId) {
+  const [data, setDataState] = React.useState({});
+  const [milestones, setMilestonesState] = React.useState({});
+  const [loading, setLoading] = React.useState(true);
+  const latest = React.useRef({ data:{}, milestones:{} });
+  const saveTimer = React.useRef(null);
+
+  const docRef = React.useMemo(() => {
+    if (!db || !uid || !moduleId) return null;
+    return db.collection('users').doc(uid).collection('modules').doc(moduleId);
+  }, [uid, moduleId]);
+
+  React.useEffect(() => {
+    if (!docRef) { setLoading(false); return; }
+    setLoading(true);
+    const unsub = docRef.onSnapshot(snap => {
+      let d = {}, m = {};
+      if (snap.exists) {
+        const doc = snap.data() || {};
+        d = doc.data || {};
+        m = doc.milestones || {};
+      } else if (moduleId === 'upsc') {
+        try { d = JSON.parse(localStorage.getItem('upsc_tracker_v2')) || {}; } catch {}
+        try { m = JSON.parse(localStorage.getItem('upsc_milestones_v2')) || {}; } catch {}
+        docRef.set({ data:d, milestones:m, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+      latest.current = { data:d, milestones:m };
+      setDataState(d);
+      setMilestonesState(m);
+      setLoading(false);
+    }, () => setLoading(false));
+    return () => { unsub(); clearTimeout(saveTimer.current); };
+  }, [docRef]);
+
+  function scheduleSave() {
+    if (!docRef) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      docRef.set({
+        data: latest.current.data,
+        milestones: latest.current.milestones,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge:true });
+    }, 800);
+  }
+
+  function setData(updater) {
+    setDataState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      latest.current.data = next;
+      scheduleSave();
+      return next;
+    });
+  }
+
+  function setMilestones(updater) {
+    setMilestonesState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      latest.current.milestones = next;
+      scheduleSave();
+      return next;
+    });
+  }
+
+  return { data, setData, milestones, setMilestones, loading };
+}
+
+// ==================== COMPONENTS ====================
+
+function TrackerApp({ module, data, setData, milestones, setMilestones, onBack, onLogout }) {
+  const SUBJECTS_DATA = module.subjectsData;
+  const MILESTONES_DATA = module.milestonesData;
+  const [activeSubject, setActiveSubject] = React.useState(SUBJECTS_DATA[0].id);
+  const [view, setView] = React.useState('subjects'); // subjects | milestones
+  const [filter, setFilter] = React.useState('all'); // all | static | dynamic | pending | done
+  const [search, setSearch] = React.useState('');
+  const [showExport, setShowExport] = React.useState(false);
+  const [collapsedTopics, setCollapsedTopics] = React.useState({});
+
+  function updateField(key, field, value) {
+    setData(prev => ({...prev, [key]: {...(prev[key]||{}), [field]: value}}));
+  }
+
+  function getStats() {
+    let total = 0, completed = 0, rev1 = 0, rev2 = 0;
+    SUBJECTS_DATA.forEach(sub => {
+      sub.topics.forEach(topic => {
+        topic.subtopics.forEach((_, idx) => {
+          total++;
+          const key = getSubtopicKey(sub.id, topic.id, idx);
+          const d = data[key] || {};
+          if (d.completed) completed++;
+          if (d.rev1) rev1++;
+          if (d.rev2) rev2++;
+        });
+      });
+    });
+    return { total, completed, rev1, rev2 };
+  }
+
+  function getSubjectStats(subjectId) {
+    const sub = SUBJECTS_DATA.find(s => s.id === subjectId);
+    if (!sub) return { total:0, completed:0 };
+    let total = 0, completed = 0;
+    sub.topics.forEach(topic => {
+      topic.subtopics.forEach((_, idx) => {
+        total++;
+        const key = getSubtopicKey(sub.id, topic.id, idx);
+        if ((data[key]||{}).completed) completed++;
+      });
+    });
+    return { total, completed };
+  }
+
+  function getTopicStats(subjectId, topicId) {
+    const sub = SUBJECTS_DATA.find(s => s.id === subjectId);
+    const topic = sub?.topics.find(t => t.id === topicId);
+    if (!topic) return {total:0, completed:0};
+    let total = topic.subtopics.length, completed = 0;
+    topic.subtopics.forEach((_, idx) => {
+      const key = getSubtopicKey(subjectId, topicId, idx);
+      if ((data[key]||{}).completed) completed++;
+    });
+    return { total, completed };
+  }
+
+  function exportProgress() {
+    const exportData = { module: module.id, data, milestones, exportedAt: new Date().toISOString(), version: 3 };
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  function importProgress(jsonStr) {
+    try {
+      const imported = JSON.parse(jsonStr);
+      if (imported.data) setData(imported.data);
+      if (imported.milestones) setMilestones(imported.milestones);
+      alert('Progress imported successfully!');
+    } catch { alert('Invalid JSON. Please check the format.'); }
+  }
+
+  function toggleCollapse(topicId) {
+    setCollapsedTopics(prev => ({...prev, [topicId]: !prev[topicId]}));
+  }
+
+  const stats = getStats();
+  const pct = stats.total ? Math.round(stats.completed / stats.total * 100) : 0;
+  const activeSub = SUBJECTS_DATA.find(s => s.id === activeSubject);
+
+  return React.createElement('div', null,
+    // HEADER
+    React.createElement('header', {className:'app-header'},
+      React.createElement('div', {className:'top-bar'},
+        React.createElement('div', null,
+          React.createElement('h1', null, module.emoji+' '+module.name+' — Progress Tracker'),
+          module.targetDate && React.createElement('div', {className:'subtitle'},
+            module.targetLabel+': '+new Date(module.targetDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+
+            ' • '+Math.ceil((new Date(module.targetDate)-new Date())/(1000*60*60*24))+' days remaining'
+          )
+        ),
+        React.createElement('div', {className:'header-stats'},
+          React.createElement('div', {className:'stat-pill green'},
+            React.createElement('span', null, 'Done '),
+            React.createElement('span', {className:'num'}, stats.completed+'/'+stats.total)
+          ),
+          React.createElement('div', {className:'stat-pill amber'},
+            React.createElement('span', null, 'Rev 1 '),
+            React.createElement('span', {className:'num'}, stats.rev1)
+          ),
+          React.createElement('div', {className:'stat-pill purple'},
+            React.createElement('span', null, 'Rev 2 '),
+            React.createElement('span', {className:'num'}, stats.rev2)
+          ),
+        ),
+        React.createElement('div', {className:'header-actions'},
+          React.createElement('button', {className:'btn'+(view==='subjects'?' primary':''), onClick:()=>setView('subjects')}, '📋 Subjects'),
+          React.createElement('button', {className:'btn'+(view==='milestones'?' primary':''), onClick:()=>setView('milestones')}, '📅 Milestones'),
+          React.createElement('button', {className:'btn', onClick:()=>setShowExport(true)}, '💾 Export / Import'),
+          React.createElement('button', {className:'btn', onClick:onBack}, '🗂️ Modules'),
+          React.createElement('button', {className:'btn danger', onClick:onLogout}, '🚪 Logout'),
+        )
+      )
+    ),
+
+    React.createElement('div', {className:'main-container'},
+      // SIDEBAR
+      view === 'subjects' && React.createElement('nav', {className:'sidebar'},
+        React.createElement('div', {className:'sidebar-section-label'}, module.sidebarLabel || 'Topics'),
+        SUBJECTS_DATA.map(sub => {
+          const ss = getSubjectStats(sub.id);
+          const p = ss.total ? Math.round(ss.completed/ss.total*100) : 0;
+          return React.createElement('div', {
+            key:sub.id,
+            className:'sidebar-item'+(activeSubject===sub.id?' active':''),
+            onClick:()=>setActiveSubject(sub.id)
+          },
+            React.createElement('span', null,
+              React.createElement('span', {className:'emoji'}, sub.emoji),
+              sub.name
+            ),
+            React.createElement('span', {className:'sidebar-progress'}, p+'%')
+          );
+        })
+      ),
+
+      // CONTENT
+      view === 'subjects' && activeSub && React.createElement('main', {className:'content'},
+        React.createElement('div', {className:'subject-header'},
+          React.createElement('div', null,
+            React.createElement('div', {className:'subject-title'}, activeSub.emoji+' '+activeSub.name),
+            React.createElement('div', {style:{fontSize:'13px',color:'var(--text-muted)',marginTop:'4px'}},
+              'PYQs: '+activeSub.pyqs+' (2011–25) • Weightage: '+activeSub.weight
+            )
+          ),
+          React.createElement('div', {className:'filter-bar'},
+            React.createElement('input', {
+              className:'search-input', placeholder:'Search topics...',
+              value:search, onChange:e=>setSearch(e.target.value)
+            }),
+            ['all','static','dynamic','pending','done'].map(f =>
+              React.createElement('button', {
+                key:f, className:'filter-btn'+(filter===f?' active':''),
+                onClick:()=>setFilter(f)
+              }, f)
+            )
+          )
+        ),
+
+        // Progress bar
+        (() => {
+          const ss = getSubjectStats(activeSub.id);
+          const p = ss.total ? Math.round(ss.completed/ss.total*100) : 0;
+          return React.createElement('div', {className:'progress-overview'},
+            React.createElement('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+              React.createElement('span', {style:{fontSize:'13px',fontWeight:600}}, 'Overall Progress'),
+              React.createElement('span', {className:'pct', style:{fontSize:'13px',fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:'var(--green)'}}, p+'%')
+            ),
+            React.createElement('div', {className:'progress-bar-outer'},
+              React.createElement('div', {className:'progress-bar-inner', style:{width:p+'%'}})
+            ),
+            React.createElement('div', {className:'progress-text'},
+              React.createElement('span', null, ss.completed+' of '+ss.total+' subtopics completed'),
+            )
+          );
+        })(),
+
+        // Topic groups
+        activeSub.topics.filter(topic => {
+          if (filter === 'static' && topic.type !== 'static') return false;
+          if (filter === 'dynamic' && topic.type !== 'dynamic') return false;
+          if (search) {
+            const q = search.toLowerCase();
+            if (topic.name.toLowerCase().includes(q)) return true;
+            return topic.subtopics.some(s => s.toLowerCase().includes(q));
+          }
+          return true;
+        }).map(topic => {
+          const ts = getTopicStats(activeSub.id, topic.id);
+          const collapsed = collapsedTopics[topic.id];
+          const filteredSubtopics = topic.subtopics.filter((st, idx) => {
+            if (search && !st.toLowerCase().includes(search.toLowerCase()) &&
+                !topic.name.toLowerCase().includes(search.toLowerCase())) return false;
+            const key = getSubtopicKey(activeSub.id, topic.id, idx);
+            const d = data[key] || {};
+            if (filter === 'pending' && d.completed) return false;
+            if (filter === 'done' && !d.completed) return false;
+            return true;
+          });
+
+          return React.createElement('div', {key:topic.id, className:'topic-group'},
+            React.createElement('div', {
+              className:'topic-group-header'+(collapsed?' collapsed':''),
+              onClick:()=>toggleCollapse(topic.id)
+            },
+              React.createElement('div', {className:'topic-group-title'},
+                React.createElement('span', {className:'arrow'+(collapsed?'':' open')}, '▶'),
+                topic.name,
+                React.createElement('span', {className:'topic-type-tag '+(topic.type==='static'?'tag-static':'tag-dynamic')}, topic.type),
+              ),
+              React.createElement('div', {className:'topic-group-meta'},
+                React.createElement('span', null, ts.completed+'/'+ts.total),
+                React.createElement('div', {className:'mini-progress'},
+                  React.createElement('div', {className:'mini-progress-fill', style:{width:(ts.total?ts.completed/ts.total*100:0)+'%'}})
+                )
+              )
+            ),
+            !collapsed && React.createElement('div', {className:'subtopics-table'},
+              React.createElement('div', {className:'table-header'},
+                React.createElement('div', {className:'cell'}, 'Subtopic'),
+                React.createElement('div', {className:'cell center'}, 'Done'),
+                React.createElement('div', {className:'cell center'}, 'Rev 1'),
+                React.createElement('div', {className:'cell center'}, 'Rev 2'),
+                React.createElement('div', {className:'cell'}, 'Comments'),
+              ),
+              filteredSubtopics.map((st, origIdx) => {
+                const realIdx = topic.subtopics.indexOf(st);
+                const key = getSubtopicKey(activeSub.id, topic.id, realIdx);
+                const d = data[key] || {};
+                return React.createElement('div', {key:realIdx, className:'subtopic-row'+(d.completed?' completed':'')},
+                  React.createElement('div', {className:'cell name'},
+                    React.createElement('span', {style:{fontSize:'12px',color:'var(--text-muted)',fontFamily:"'JetBrains Mono',monospace",minWidth:'20px'}}, (realIdx+1)+'.'),
+                    st
+                  ),
+                  React.createElement('div', {className:'cell center'},
+                    React.createElement('label', {className:'checkbox-wrapper'},
+                      React.createElement('input', {type:'checkbox', checked:!!d.completed, onChange:e=>updateField(key,'completed',e.target.checked)}),
+                      React.createElement('span', {className:'checkbox-visual'}, d.completed?'✓':'')
+                    )
+                  ),
+                  React.createElement('div', {className:'cell center'},
+                    React.createElement('label', {className:'checkbox-wrapper rev1'},
+                      React.createElement('input', {type:'checkbox', checked:!!d.rev1, onChange:e=>updateField(key,'rev1',e.target.checked)}),
+                      React.createElement('span', {className:'checkbox-visual'}, d.rev1?'✓':'')
+                    )
+                  ),
+                  React.createElement('div', {className:'cell center'},
+                    React.createElement('label', {className:'checkbox-wrapper rev2'},
+                      React.createElement('input', {type:'checkbox', checked:!!d.rev2, onChange:e=>updateField(key,'rev2',e.target.checked)}),
+                      React.createElement('span', {className:'checkbox-visual'}, d.rev2?'✓':'')
+                    )
+                  ),
+                  React.createElement('div', {className:'cell'},
+                    React.createElement('input', {
+                      className:'comment-input', placeholder:'Add notes...',
+                      value: d.comment || '',
+                      onChange: e => updateField(key, 'comment', e.target.value)
+                    })
+                  )
+                );
+              })
+            )
+          );
+        })
+      ),
+
+      // MILESTONES VIEW
+      view === 'milestones' && React.createElement('main', {className:'milestone-panel', style:{flex:1, overflowY:'auto'}},
+        React.createElement('h2', {style:{fontSize:'20px',fontWeight:800,marginBottom:'16px'}}, '📅 Weekly Milestones'),
+        React.createElement('p', {style:{fontSize:'13px',color:'var(--text-muted)',marginBottom:'20px'}},
+          'Track your weekly targets. Check off tasks as you complete them. Share this data with Claude to re-adjust future milestones.'
+        ),
+        MILESTONES_DATA.map(week => {
+          const weekKey = week.id;
+          const wd = milestones[weekKey] || {};
+          const tasksDone = week.tasks.filter((_,i) => wd['t'+i]).length;
+          const allDone = tasksDone === week.tasks.length;
+          const now = new Date();
+          const weekStart = new Date(week.start);
+          const weekEnd = new Date(week.end);
+          const isActive = now >= weekStart && now <= weekEnd;
+          const isPast = now > weekEnd;
+          const statusClass = week.isBreak ? 'status-break' : allDone ? 'status-done' : isActive ? 'status-active' : 'status-pending';
+          const statusText = week.isBreak ? '🏖️ BREAK' : allDone ? '✅ DONE' : isActive ? '▶ ACTIVE' : isPast && !allDone ? '⚠️ BEHIND' : 'PENDING';
+          const collapsed = collapsedTopics['wk_'+week.id];
+
+          return React.createElement('div', {key:week.id, className:'week-card'},
+            React.createElement('div', {className:'week-card-header', onClick:()=>toggleCollapse('wk_'+week.id)},
+              React.createElement('div', null,
+                React.createElement('span', {className:'week-label'}, week.label),
+                React.createElement('span', {className:'week-dates'}, ' — '+week.dateLabel),
+              ),
+              React.createElement('div', {style:{display:'flex',alignItems:'center',gap:'10px'}},
+                React.createElement('span', {style:{fontSize:'12px',color:'var(--text-muted)',fontFamily:"'JetBrains Mono',monospace"}}, tasksDone+'/'+week.tasks.length),
+                React.createElement('span', {className:'week-status '+statusClass}, statusText),
+              )
+            ),
+            !collapsed && React.createElement('div', {className:'week-tasks'},
+              week.tasks.map((task, i) => {
+                return React.createElement('div', {key:i, className:'week-task'},
+                  React.createElement('label', {className:'checkbox-wrapper'},
+                    React.createElement('input', {type:'checkbox', checked:!!wd['t'+i],
+                      onChange:e => {
+                        const nm = {...milestones, [weekKey]:{...wd, ['t'+i]:e.target.checked}};
+                        setMilestones(nm);
+                      }
+                    }),
+                    React.createElement('span', {className:'checkbox-visual'}, wd['t'+i]?'✓':'')
+                  ),
+                  React.createElement('span', {style:{textDecoration:wd['t'+i]?'line-through':'none', opacity:wd['t'+i]?0.5:1}}, task)
+                );
+              })
+            )
+          );
+        })
+      ),
+    ),
+
+    // EXPORT MODAL
+    showExport && React.createElement('div', {className:'export-modal', onClick:e=>{if(e.target===e.currentTarget)setShowExport(false)}},
+      React.createElement('div', {className:'export-modal-content'},
+        React.createElement('h3', null, '💾 Export / Import Progress'),
+        React.createElement('p', {style:{fontSize:'12px',color:'var(--text-muted)',marginBottom:'12px'}},
+          'Copy this JSON to back up your progress or share with Claude for milestone adjustment. Paste imported JSON and click Import.'
+        ),
+        React.createElement('textarea', {
+          className:'export-textarea', id:'export-area',
+          defaultValue: exportProgress()
+        }),
+        React.createElement('div', {style:{display:'flex',gap:'8px',marginTop:'12px',justifyContent:'flex-end'}},
+          React.createElement('button', {className:'btn', onClick:()=>{
+            navigator.clipboard.writeText(document.getElementById('export-area').value);
+            alert('Copied to clipboard!');
+          }}, 'Copy'),
+          React.createElement('button', {className:'btn primary', onClick:()=>{
+            importProgress(document.getElementById('export-area').value);
+            setShowExport(false);
+          }}, 'Import'),
+          React.createElement('button', {className:'btn danger', onClick:()=>{
+            if(confirm('Reset ALL progress for this module? This cannot be undone.')){
+              setData({});
+              setMilestones({});
+              setShowExport(false);
+            }
+          }}, 'Reset All'),
+          React.createElement('button', {className:'btn', onClick:()=>setShowExport(false)}, 'Close'),
+        )
+      )
+    )
+  );
+}
+
+const MILESTONES_DATA = [
+  {id:'w1',label:'Week 1',dateLabel:'Jun 15–21, 2026',start:'2026-06-15',end:'2026-06-21',tasks:[
+    'Polity: Complete Laxmikanth Ch 1-8 (Historical Background to Fundamental Rights)',
+    'Environment: Shankar IAS Ch 1-3 (Ecology basics, Ecosystem, Biodiversity)',
+    'Solve: 20 Polity PYQs (2020–2025)',
+    'CA: 7 days Hindu summary notes',
+  ]},
+  {id:'w2',label:'Week 2',dateLabel:'Jun 22–28, 2026',start:'2026-06-22',end:'2026-06-28',tasks:[
+    'Polity: Laxmikanth Ch 9-16 (DPSPs, Duties, Amendment, Basic Structure)',
+    'Environment: Shankar IAS Ch 4-6 (Pollution, Climate Change)',
+    'Solve: 20 Environment PYQs (2020–2025)',
+    'CA: 7 days + weekly revision',
+  ]},
+  {id:'w3',label:'Week 3',dateLabel:'Jun 29 – Jul 5',start:'2026-06-29',end:'2026-07-05',tasks:[
+    'Polity: Laxmikanth Ch 17-24 (Parliament, State Legislature, Judiciary)',
+    'Economy: Start Ramesh Singh — Ch 1-3 (Basic Concepts, National Income)',
+    'Solve: 20 Polity PYQs (2015–2019)',
+    'CA: 7 days',
+  ]},
+  {id:'w4',label:'Week 4',dateLabel:'Jul 6–12',start:'2026-07-06',end:'2026-07-12',tasks:[
+    'Economy: Ch 4-8 (Planning, Budget, Inflation, Banking)',
+    'Geography: GC Leong Ch 1-4 (Earth, Geomorphology)',
+    'Solve: 20 Economy PYQs (2020–2025)',
+    'CA: 7 days',
+  ]},
+  {id:'w5',label:'Week 5',dateLabel:'Jul 13–19',start:'2026-07-13',end:'2026-07-19',tasks:[
+    'Economy: Ch 9-13 (Fiscal Policy, Monetary Policy, External Sector)',
+    'Geography: GC Leong Ch 5-8 (Atmosphere, Climatology)',
+    'Solve: 20 Economy PYQs (2015–2019)',
+    'CA: 7 days + fortnightly revision',
+  ]},
+  {id:'w6',label:'Week 6',dateLabel:'Jul 20–26',start:'2026-07-20',end:'2026-07-26',tasks:[
+    'Economy: Ch 14-18 (Agriculture, Industry, Infrastructure)',
+    'Geography: GC Leong Ch 9-12 (Oceans, Water, Biomes)',
+    'Solve: 20 Geography PYQs (2020–2025)',
+    'CA: 7 days',
+  ]},
+  {id:'w7',label:'Week 7',dateLabel:'Jul 27 – Aug 2',start:'2026-07-27',end:'2026-08-02',tasks:[
+    'Economy: Govt schemes compilation + Economic Survey overview',
+    'Geography: India Physical Geography (NCERT Class 11)',
+    'Solve: 30 mixed PYQs (Polity + Economy + Env)',
+    'CA: 7 days',
+  ]},
+  {id:'w8',label:'Week 8',dateLabel:'Aug 3–9',start:'2026-08-03',end:'2026-08-09',tasks:[
+    'Modern History: Spectrum Ch 1-6 (European advent to 1857 Revolt)',
+    'Geography: India Climate, Soil, Vegetation (NCERT)',
+    'Solve: 20 Geography PYQs (2015–2019)',
+    'CA: 7 days',
+  ]},
+  {id:'w9',label:'Week 9',dateLabel:'Aug 10–16',start:'2026-08-10',end:'2026-08-16',tasks:[
+    'Modern History: Spectrum Ch 7-14 (Social Reform to Extremist Phase)',
+    'Art & Culture: Nitin Singhania Ch 1-5 (Architecture, Sculpture, Painting)',
+    'Solve: 20 Modern History PYQs (2015–2025)',
+    'CA: 7 days + monthly revision',
+  ]},
+  {id:'w10',label:'Week 10',dateLabel:'Aug 17–23',start:'2026-08-17',end:'2026-08-23',tasks:[
+    'Modern History: Spectrum Ch 15-22 (Gandhi era — NCM, CDM, QIM)',
+    'Art & Culture: Ch 6-10 (Dance, Music, Theatre, Literature)',
+    'Solve: 20 Art & Culture PYQs',
+    'CA: 7 days',
+  ]},
+  {id:'w11',label:'Week 11',dateLabel:'Aug 24–30',start:'2026-08-24',end:'2026-08-30',tasks:[
+    'Modern History: Spectrum Ch 23-end (Post-independence, World History)',
+    'Ancient History: Tamil Nadu NCERT (IVC to Mauryas)',
+    'Solve: 20 Ancient History PYQs',
+    'CA: 7 days',
+  ]},
+  {id:'w12',label:'Week 12',dateLabel:'Aug 31 – Sep 6',start:'2026-08-31',end:'2026-09-06',tasks:[
+    'Ancient History: Mauryas to Gupta to South Indian dynasties',
+    'Medieval History: Delhi Sultanate + Mughals + Vijayanagar',
+    'Solve: 30 mixed PYQs (History + Art & Culture)',
+    'CA: 7 days',
+  ]},
+  {id:'w13',label:'Week 13',dateLabel:'Sep 7–14',start:'2026-09-07',end:'2026-09-14',tasks:[
+    'Science & Tech: NCERT compilation (Class 10-12 basics)',
+    'S&T: Space, Nuclear, Biotech, IT — concept notes',
+    'Solve: 30 S&T PYQs (2020–2025)',
+    'PHASE 1 REVIEW: Identify all weak areas & note gaps',
+    'CA: 7 days + monthly revision',
+  ]},
+  {id:'w14',label:'Week 14',dateLabel:'Sep 15–21',start:'2026-09-15',end:'2026-09-21',tasks:[
+    'Sociology P1: Unit 1-2 (Discipline, Science)',
+    'GS Revision: Polity weak areas (from PYQ analysis)',
+    'CA: 7 days',
+  ]},
+  {id:'w15',label:'Week 15',dateLabel:'Sep 22–28',start:'2026-09-22',end:'2026-09-28',tasks:[
+    'Sociology P1: Unit 3-4 (Research Methods, Thinkers — Marx, Durkheim, Weber)',
+    'GS Revision: Economy weak areas',
+    'CA: 7 days',
+  ]},
+  {id:'w16',label:'Week 16',dateLabel:'Sep 29 – Oct 5',start:'2026-09-29',end:'2026-10-05',tasks:[
+    'Sociology P1: Unit 4 contd (Parsons, Merton) + Unit 5 (Stratification)',
+    'GS Revision: Environment weak areas',
+    'CA: 7 days + monthly revision',
+  ]},
+  {id:'w17',label:'Week 17 🏖️',dateLabel:'Oct 6–12 (Break)',start:'2026-10-06',end:'2026-10-12',isBreak:true,tasks:[
+    'Light revision only — 1 hr daily reading',
+    'Continue daily Hindu CA summary',
+  ]},
+  {id:'w18',label:'Week 18',dateLabel:'Oct 13–19',start:'2026-10-13',end:'2026-10-19',tasks:[
+    'Sociology P1: Unit 6-7 (Work & Economic Life, Politics & Society)',
+    'GS PYQ Practice: Full mock of 100 Qs (mixed subjects)',
+    'CA: 7 days',
+  ]},
+  {id:'w19',label:'Week 19',dateLabel:'Oct 20–26',start:'2026-10-20',end:'2026-10-26',tasks:[
+    'Sociology P1: Unit 8-9 (Religion & Society, Kinship)',
+    'GS Revision: Geography weak areas',
+    'CA: 7 days',
+  ]},
+  {id:'w20',label:'Week 20',dateLabel:'Oct 27 – Nov 2',start:'2026-10-27',end:'2026-11-02',tasks:[
+    'Sociology P1: Unit 10-12 (Social Change, Development, Globalization)',
+    'Sociology P1 COMPLETE — Make summary notes',
+    'CA: 7 days + monthly revision',
+  ]},
+  {id:'w21',label:'Week 21',dateLabel:'Nov 3–9',start:'2026-11-03',end:'2026-11-09',tasks:[
+    'Sociology P2: Unit A (Caste, Tribe, Class, Kinship, Religion)',
+    'GS2: International Relations basics',
+    'CA: 7 days',
+  ]},
+  {id:'w22',label:'Week 22',dateLabel:'Nov 10–16',start:'2026-11-10',end:'2026-11-16',tasks:[
+    'Sociology P2: Unit B (Rural, Urban, Industrial structure)',
+    'GS2: India\'s neighborhood + global groupings',
+    'CA: 7 days',
+  ]},
+  {id:'w23',label:'Week 23',dateLabel:'Nov 17–23',start:'2026-11-17',end:'2026-11-23',tasks:[
+    'Sociology P2: Unit C (Social Changes — development, agrarian, urbanization)',
+    'GS2: Governance, transparency, e-governance',
+    'CA: 7 days',
+  ]},
+  {id:'w24',label:'Week 24',dateLabel:'Nov 24–30',start:'2026-11-24',end:'2026-11-30',tasks:[
+    'Sociology P2: Unit D (Social Movements, challenges)',
+    'Sociology P2 COMPLETE — Summary notes',
+    'FULL OPTIONAL REVIEW',
+    'CA: 7 days + monthly revision',
+  ]},
+  {id:'w25',label:'Week 25',dateLabel:'Dec 1–7',start:'2026-12-01',end:'2026-12-07',tasks:[
+    'GS3: Economy — Growth, Development, Employment (Mains focus)',
+    'Answer Writing: Start 2 GS answers daily (150 words, 8 min)',
+    'CA: 7 days',
+  ]},
+  {id:'w26',label:'Week 26',dateLabel:'Dec 8–14',start:'2026-12-08',end:'2026-12-14',tasks:[
+    'GS3: Agriculture, Food Processing, Land Reforms',
+    'Answer Writing: 2 answers daily',
+    'CA: 7 days',
+  ]},
+  {id:'w27',label:'Week 27',dateLabel:'Dec 15–21',start:'2026-12-15',end:'2026-12-21',tasks:[
+    'GS3: Infrastructure, Investment, S&T applications',
+    'Answer Writing: 2 GS + 1 Sociology answer daily',
+    'CA: 7 days',
+  ]},
+  {id:'w28',label:'Week 28 🏖️',dateLabel:'Dec 22–28 (Break)',start:'2026-12-22',end:'2026-12-28',isBreak:true,tasks:[
+    'Light reading + 1 answer daily',
+    'Continue daily CA',
+  ]},
+  {id:'w29',label:'Week 29',dateLabel:'Dec 29 – Jan 4',start:'2026-12-29',end:'2027-01-04',tasks:[
+    'GS3: Internal Security — border, extremism, cyber',
+    'GS3: Disaster Management',
+    'Answer Writing: 2 answers daily',
+    'CA: 7 days + monthly revision',
+  ]},
+  {id:'w30',label:'Week 30',dateLabel:'Jan 5–11',start:'2027-01-05',end:'2027-01-11',tasks:[
+    'GS4: Ethics basics — Indian & Western thinkers',
+    'Answer Writing: Ethics case studies (1/day)',
+    'CA: 7 days',
+  ]},
+  {id:'w31',label:'Week 31',dateLabel:'Jan 12–18',start:'2027-01-12',end:'2027-01-18',tasks:[
+    'GS4: Emotional Intelligence, Attitude, Aptitude',
+    'Essay Practice: Write 1 full essay (1000-1200 words)',
+    'CA: 7 days',
+  ]},
+  {id:'w32',label:'Week 32',dateLabel:'Jan 19–25',start:'2027-01-19',end:'2027-01-25',tasks:[
+    'GS4: Probity in Governance, Case Studies',
+    'Essay Practice: Write 1 full essay',
+    'GS1 Revision: Society, Culture, Geography for Mains',
+    'CA: 7 days',
+  ]},
+  {id:'w33',label:'Week 33',dateLabel:'Jan 26 – Feb 1',start:'2027-01-26',end:'2027-02-01',tasks:[
+    'Full Revision Cycle 1: Polity + Economy (rapid notes review)',
+    'Essay Practice: Write 1 full essay',
+    'CA: 7 days + monthly revision',
+  ]},
+  {id:'w34',label:'Week 34',dateLabel:'Feb 2–8',start:'2027-02-02',end:'2027-02-08',tasks:[
+    'Full Revision Cycle 1: Environment + Geography + S&T',
+    'Answer Writing: 3 answers daily (speed building)',
+    'CA: 7 days',
+  ]},
+  {id:'w35',label:'Week 35',dateLabel:'Feb 9–15',start:'2027-02-09',end:'2027-02-15',tasks:[
+    'Full Revision Cycle 1: History + Art & Culture + Sociology',
+    'IDENTIFY ALL REMAINING GAPS',
+    'CA: 7 days',
+  ]},
+  {id:'w36',label:'Week 36 🏖️',dateLabel:'Feb 16–22 (Break)',start:'2027-02-16',end:'2027-02-22',isBreak:true,tasks:[
+    'Relaxation + light reading',
+    'Continue daily CA',
+  ]},
+  {id:'w37',label:'Week 37',dateLabel:'Feb 23 – Mar 1',start:'2027-02-23',end:'2027-03-01',tasks:[
+    'Gap filling from Phase 3 review',
+    'Start PYQ marathon (subject-wise — Environment first)',
+    'CA: 7 days',
+  ]},
+  {id:'w38',label:'Week 38',dateLabel:'Mar 2–8',start:'2027-03-02',end:'2027-03-08',tasks:[
+    'PYQ Marathon: Environment (all 213 Qs) + Economy (start)',
+    'Full Mock Test #1 (external test series)',
+    'CA: 7 days + monthly revision',
+  ]},
+  {id:'w39',label:'Week 39',dateLabel:'Mar 9–15',start:'2027-03-09',end:'2027-03-15',tasks:[
+    'PYQ Marathon: Economy (199 Qs) + Polity (start)',
+    'Mock Analysis: Deep review of wrong answers',
+    'CA: 7 days',
+  ]},
+  {id:'w40',label:'Week 40',dateLabel:'Mar 16–22',start:'2027-03-16',end:'2027-03-22',tasks:[
+    'PYQ Marathon: Polity (191 Qs) + Geography (start)',
+    'Full Mock Test #2',
+    'CA: 7 days',
+  ]},
+  {id:'w41',label:'Week 41',dateLabel:'Mar 23–29',start:'2027-03-23',end:'2027-03-29',tasks:[
+    'PYQ Marathon: Geography (152 Qs) + S&T (151 Qs)',
+    'Mock Analysis + weak area notes',
+    'CA: 7 days',
+  ]},
+  {id:'w42',label:'Week 42',dateLabel:'Mar 30 – Apr 5',start:'2027-03-30',end:'2027-04-05',tasks:[
+    'PYQ Marathon: History (all) + Art & Culture (all)',
+    'Full Mock Test #3',
+    'CA: 7 days + QUARTERLY REVISION',
+  ]},
+  {id:'w43',label:'Week 43',dateLabel:'Apr 6–12',start:'2027-04-06',end:'2027-04-12',tasks:[
+    'Rapid Revision: All subjects (summary notes only)',
+    'Full Mock Test #4',
+    'CA: 7 days',
+  ]},
+  {id:'w44',label:'Week 44',dateLabel:'Apr 13–19',start:'2027-04-13',end:'2027-04-19',tasks:[
+    'Mock Test #5 + #6 (2 per week now)',
+    'Current Affairs consolidation (last 12 months)',
+    'Weak area targeted revision',
+  ]},
+  {id:'w45',label:'Week 45',dateLabel:'Apr 20–26',start:'2027-04-20',end:'2027-04-26',tasks:[
+    'Mock Test #7 + #8',
+    'Government schemes rapid revision',
+    'Map work practice',
+  ]},
+  {id:'w46',label:'Week 46',dateLabel:'Apr 27 – May 3',start:'2027-04-27',end:'2027-05-03',tasks:[
+    'Mock Test #9 + #10',
+    'Focus ONLY on high-weightage topics',
+    'CA compilation — last 3 months intensive',
+  ]},
+  {id:'w47',label:'Week 47',dateLabel:'May 4–10',start:'2027-05-04',end:'2027-05-10',tasks:[
+    'Final revision: Environment + Economy + Polity (the big 3)',
+    'Daily sectional mock (50 Qs, 1 hour)',
+    'CA: Final revision pass',
+  ]},
+  {id:'w48',label:'Week 48',dateLabel:'May 11–17',start:'2027-05-11',end:'2027-05-17',tasks:[
+    'Light revision — summary notes ONLY',
+    'CSAT practice (2 full papers)',
+    'Fix sleep schedule, mental preparation',
+    'NO NEW TOPICS',
+  ]},
+  {id:'w49',label:'Week 49 🎯',dateLabel:'May 18–23 (EXAM WEEK)',start:'2027-05-18',end:'2027-05-23',tasks:[
+    'Day -5 to -3: Quick flip through all notes',
+    'Day -2: Light reading, relax, early sleep',
+    'Day -1: NO STUDY. Rest. Prepare logistics.',
+    'MAY 23: PRELIMS DAY — YOU GOT THIS! 🎯',
+  ]},
+];
+
+// ==================== OTHER MODULES (skeletons — flesh these out as needed) ====================
+
+const MPPSC_SUBJECTS = [
+  { id:"mp_gs", name:"General Studies", emoji:"📘", weight:"TBD", pyqs:0, topics:[
+    { id:"mpgs1", name:"Getting Started — Add Your Syllabus", type:"static", subtopics:[
+      "Replace this with MPPSC GS Paper 1 topics (MP History, Geography, Polity, Society)",
+      "Replace this with MPPSC GS Paper 2 topics (Economy, Science & Tech, Current Affairs)",
+      "Ask Claude to build out the full MPPSC syllabus structure here, mirroring the UPSC module",
+    ]},
+  ]},
+];
+const MPPSC_MILESTONES = [
+  { id:"w1", label:"Week 1", dateLabel:"Set your start date", start:"2026-06-15", end:"2026-06-21", tasks:[
+    "Define your MPPSC prep weekly plan — edit MPPSC_MILESTONES in index.html",
+  ]},
+];
+
+const MTECH_SUBJECTS = [
+  { id:"mtech_core", name:"Core Subjects", emoji:"🎓", weight:"TBD", pyqs:0, topics:[
+    { id:"mt1", name:"Getting Started — Add Your Syllabus", type:"static", subtopics:[
+      "Replace this with your GATE/M.Tech core subjects (e.g. DS, Algorithms, OS, CN, DBMS)",
+      "Add Engineering Mathematics topics",
+      "Ask Claude to build out the full M.Tech prep structure here, mirroring the UPSC module",
+    ]},
+  ]},
+];
+const MTECH_MILESTONES = [
+  { id:"w1", label:"Week 1", dateLabel:"Set your start date", start:"2026-06-15", end:"2026-06-21", tasks:[
+    "Define your M.Tech prep weekly plan — edit MTECH_MILESTONES in index.html",
+  ]},
+];
+
+const CORPORATE_SUBJECTS = [
+  { id:"corp_prep", name:"Prep Tracks", emoji:"💼", weight:"TBD", pyqs:0, topics:[
+    { id:"cp1", name:"Getting Started — Add Your Tracks", type:"static", subtopics:[
+      "Replace this with your job-switch tracks (e.g. DSA, System Design, Resume, Behavioral)",
+      "Add company-specific prep notes",
+      "Ask Claude to build out the full corporate prep structure here, mirroring the UPSC module",
+    ]},
+  ]},
+];
+const CORPORATE_MILESTONES = [
+  { id:"w1", label:"Week 1", dateLabel:"Set your start date", start:"2026-06-15", end:"2026-06-21", tasks:[
+    "Define your job-search weekly plan — edit CORPORATE_MILESTONES in index.html",
+  ]},
+];
+
+// ==================== MODULE REGISTRY ====================
+
+const MODULES = [
+  {
+    id:"upsc", name:"UPSC CSE 2027", emoji:"🎯",
+    tagline:"11 GS subjects + Sociology optional — 49-week plan",
+    sidebarLabel:"GS Prelims + Mains",
+    targetDate:"2027-05-23", targetLabel:"Prelims",
+    subjectsData: SUBJECTS_DATA, milestonesData: MILESTONES_DATA,
+  },
+  {
+    id:"mppsc", name:"MPPSC", emoji:"📘",
+    tagline:"Madhya Pradesh PSC preparation tracker",
+    sidebarLabel:"General Studies",
+    subjectsData: MPPSC_SUBJECTS, milestonesData: MPPSC_MILESTONES,
+  },
+  {
+    id:"mtech", name:"M.Tech Prep", emoji:"🎓",
+    tagline:"GATE / M.Tech entrance preparation tracker",
+    sidebarLabel:"Core Subjects",
+    subjectsData: MTECH_SUBJECTS, milestonesData: MTECH_MILESTONES,
+  },
+  {
+    id:"corporate", name:"Corporate Job Switch", emoji:"💼",
+    tagline:"Interview prep, resume & job-search tracker",
+    sidebarLabel:"Prep Tracks",
+    subjectsData: CORPORATE_SUBJECTS, milestonesData: CORPORATE_MILESTONES,
+  },
+];
+
+// ==================== AUTH / MODULE SHELL ====================
+
+function SetupRequiredScreen() {
+  return React.createElement('div', {className:'login-screen'},
+    React.createElement('div', {className:'login-card'},
+      React.createElement('div', {className:'login-logo'}, '⚙️'),
+      React.createElement('h1', null, 'Firebase Setup Required'),
+      React.createElement('div', {className:'login-subtitle'}, 'Add your Firebase project config to enable login and realtime sync.'),
+      React.createElement('div', {className:'setup-note'},
+        '1. Open ', React.createElement('code', null, 'index.html'), ' in an editor.', React.createElement('br'),
+        '2. Find the ', React.createElement('code', null, 'firebaseConfig'), ' object near the top of the script.', React.createElement('br'),
+        '3. Replace the placeholder values with your Firebase project’s web app config.', React.createElement('br'),
+        '4. See README.md for the full step-by-step setup guide.'
+      )
+    )
+  );
+}
+
+function LoginScreen() {
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    if (username.trim().toLowerCase() !== 'admin') {
+      setError('Invalid username or password.');
+      return;
+    }
+    setBusy(true);
+    auth.signInWithEmailAndPassword(ADMIN_EMAIL, password)
+      .catch(() => setError('Invalid username or password.'))
+      .finally(() => setBusy(false));
+  }
+
+  return React.createElement('div', {className:'login-screen'},
+    React.createElement('form', {className:'login-card', onSubmit:handleSubmit},
+      React.createElement('div', {className:'login-logo'}, '🎯'),
+      React.createElement('h1', null, 'Exam Prep Tracker'),
+      React.createElement('div', {className:'login-subtitle'}, 'Sign in to access your progress'),
+      React.createElement('input', {
+        className:'login-input', placeholder:'Username', value:username, autoFocus:true,
+        autoComplete:'username', onChange:e=>setUsername(e.target.value)
+      }),
+      React.createElement('input', {
+        className:'login-input', type:'password', placeholder:'Password', value:password,
+        autoComplete:'current-password', onChange:e=>setPassword(e.target.value)
+      }),
+      error && React.createElement('div', {className:'login-error'}, error),
+      React.createElement('button', {className:'btn primary login-btn', type:'submit', disabled:busy},
+        busy ? 'Signing in…' : 'Log In'
+      )
+    )
+  );
+}
+
+function ModuleSelector({ uid, onSelect, onLogout }) {
+  const [progress, setProgress] = React.useState({});
+
+  React.useEffect(() => {
+    if (!db || !uid) return;
+    MODULES.forEach(mod => {
+      db.collection('users').doc(uid).collection('modules').doc(mod.id).get().then(snap => {
+        const d = snap.exists ? (snap.data().data || {}) : {};
+        let total = 0, completed = 0;
+        mod.subjectsData.forEach(sub => sub.topics.forEach(topic => topic.subtopics.forEach((_, idx) => {
+          total++;
+          if ((d[getSubtopicKey(sub.id, topic.id, idx)] || {}).completed) completed++;
+        })));
+        setProgress(prev => ({...prev, [mod.id]: total ? Math.round(completed/total*100) : 0}));
+      }).catch(()=>{});
+    });
+  }, [uid]);
+
+  return React.createElement('div', null,
+    React.createElement('header', {className:'app-header'},
+      React.createElement('div', {className:'top-bar'},
+        React.createElement('div', null,
+          React.createElement('h1', null, '🗂️ Exam Prep Tracker'),
+          React.createElement('div', {className:'subtitle'}, 'Choose a module to continue')
+        ),
+        React.createElement('div', {className:'header-actions'},
+          React.createElement('button', {className:'btn danger', onClick:onLogout}, '🚪 Logout')
+        )
+      )
+    ),
+    React.createElement('div', {className:'module-grid'},
+      MODULES.map(mod => React.createElement('div', {
+        key:mod.id, className:'module-card', onClick:()=>onSelect(mod.id)
+      },
+        React.createElement('div', {className:'module-card-emoji'}, mod.emoji),
+        React.createElement('div', {className:'module-card-name'}, mod.name),
+        React.createElement('div', {className:'module-card-tagline'}, mod.tagline || ''),
+        React.createElement('div', {className:'progress-bar-outer'},
+          React.createElement('div', {className:'progress-bar-inner', style:{width:(progress[mod.id]||0)+'%'}})
+        ),
+        React.createElement('div', {className:'module-card-pct'}, (progress[mod.id]||0)+'% complete')
+      ))
+    )
+  );
+}
+
+function ModuleTracker({ uid, module, onBack, onLogout }) {
+  const { data, setData, milestones, setMilestones, loading } = useModuleData(uid, module.id);
+  if (loading) {
+    return React.createElement('div', {className:'login-screen'},
+      React.createElement('div', {className:'login-card'}, 'Loading '+module.name+'…')
+    );
+  }
+  return React.createElement(TrackerApp, { module, data, setData, milestones, setMilestones, onBack, onLogout });
+}
+
+function RootApp() {
+  const [authUser, setAuthUser] = React.useState(undefined); // undefined=checking, null=logged out
+  const [activeModuleId, setActiveModuleId] = React.useState(() => localStorage.getItem('last_module_id') || null);
+
+  React.useEffect(() => {
+    if (!auth) { setAuthUser(null); return; }
+    return auth.onAuthStateChanged(setAuthUser);
+  }, []);
+
+  if (!FIREBASE_READY) return React.createElement(SetupRequiredScreen);
+
+  if (authUser === undefined) {
+    return React.createElement('div', {className:'login-screen'}, React.createElement('div', {className:'login-card'}, 'Loading…'));
+  }
+
+  if (!authUser) return React.createElement(LoginScreen);
+
+  if (!activeModuleId) {
+    return React.createElement(ModuleSelector, {
+      uid: authUser.uid,
+      onSelect: id => { localStorage.setItem('last_module_id', id); setActiveModuleId(id); },
+      onLogout: () => { localStorage.removeItem('last_module_id'); auth.signOut(); },
+    });
+  }
+
+  const module = MODULES.find(m => m.id === activeModuleId);
+  return React.createElement(ModuleTracker, {
+    key: module.id,
+    uid: authUser.uid,
+    module,
+    onBack: () => { localStorage.removeItem('last_module_id'); setActiveModuleId(null); },
+    onLogout: () => { localStorage.removeItem('last_module_id'); setActiveModuleId(null); auth.signOut(); },
+  });
+}
+
+ReactDOM.render(React.createElement(RootApp), document.getElementById('root'));
+</script>
+</body>
+</html>
